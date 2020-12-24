@@ -1,5 +1,7 @@
 from typing import List
 import torch
+import tempfile
+import magic
 from fastai.vision.all import load_learner, ImageDataLoaders, Resize, Learner
 
 
@@ -60,6 +62,7 @@ class FastPredict(object):
             self.dls = self.learner.dls.cuda()
         else:
             self.dls = self.learner.dls
+        assert self.dls.device.type == self.device
         # TODO - need to support other vocab in the future
         # assert len(ocab) == 2
         if expected_vocab:
@@ -72,8 +75,6 @@ class FastPredict(object):
         #print('device type: ', type(self.learner.dls.device))
         #print('device dir: ', dir(self.learner.dls.device))
         #print('device type2: ', self.learner.dls.device.type)
-
-        assert self.dls.device.type == self.device
         dataloader = self.dls.test_dl(paths, device=self.device, num_workers=0)
         #if CUDA_AVAILABLE and 'cuda' not in self.learner.dls.device:
         #    logging.error('error: cuda not available for DLS')
@@ -94,8 +95,23 @@ class FastPredict(object):
         assert len(scores) == 1
         return scores[0]
 
+    def predict_contents(self, contents, target_class=None):
+        # TODO - this is a hacky/slow way to do prediction based on bytes in memory. Should look up a better way to
+        # do this
+        ext = '.' + magic.from_buffer(contents, mime=True).split('/')[-1]
+        with tempfile.NamedTemporaryFile(mode='wb', suffix=ext) as f:
+            f.write(contents)
+            f.flush()
+            return self.predict_path(f.name, target_class=target_class)
+
 
 class FastPredictBool(FastPredict):
+    DEFAULT_TRUE = 'true'
+    DEFAULT_VOCAB = ('false', DEFAULT_TRUE)
+
+    @classmethod
+    def from_path(cls, learner_path, device='auto', expected_vocab=DEFAULT_VOCAB):
+        return super().from_path(learner_path, device=device, expected_vocab=expected_vocab)
 
     def predict_paths(self, paths, target_class=None) -> List[float]:
         if target_class is None:
@@ -107,7 +123,12 @@ class FastPredictBool(FastPredict):
             target_class = self.true_word
         return super().predict_path(path, target_class=target_class)
 
-    def __init__(self, learner, device, expected_vocab=('false', 'true')):
+    def predict_contents(self, contents, target_class=None):
+        if target_class is None:
+            target_class = self.true_word
+        return super().predict_contents(contents, target_class=target_class)
+
+    def __init__(self, learner, device, expected_vocab=DEFAULT_VOCAB):
         assert len(expected_vocab) == 2
         self.false_word = expected_vocab[0]
         self.true_word = expected_vocab[1]

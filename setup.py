@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="fastpredict",
-    version="0.0.1",
+    version="0.0.4",
     author="Kapil Yedidi",
     author_email="kapily.code@gmail.com",
     description="A few helper utilities to make it simpler to perform fastai inference/prediction",
@@ -15,6 +15,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=[
         'fastai>=2.1.10',
+        'python-magic>=0.4.18',
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
