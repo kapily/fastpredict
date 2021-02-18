@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict, Union
 import torch
 import tempfile
 import magic
@@ -69,8 +69,8 @@ class FastPredict(object):
             assert set(self.vocab) == set(expected_vocab), f'Error vocab is actually: {str(self.vocab)}'
         # self.true_idx = vocab.o2i[True]
 
-    def predict_paths(self, paths, target_class=None) -> List[float]:
-        assert target_class is not None, 'For now, target_class is required. in future, all classes will be returned'
+    def predict_paths(self, paths, target_class=None) -> List[Union[float, Dict[str, float]]]:
+        # assert target_class is not None, 'For now, target_class is required. in future, all classes will be returned'
         # TODO ensure that it is in CUDA if it is available
         #print('device type: ', type(self.learner.dls.device))
         #print('device dir: ', dir(self.learner.dls.device))
@@ -85,9 +85,18 @@ class FastPredict(object):
         #    dataloader.cuda()
         imgs, probs, classes, clas_idx = self.learner.get_preds(
             dl=dataloader, with_input=True, with_decoded=True)
-        scores = [float(scores[self.vocab.o2i[target_class]]) for scores in probs]
-        assert len(scores) == len(paths)
-        return scores
+        if target_class is not None:
+            scores = [float(scores[self.vocab.o2i[target_class]]) for scores in probs]
+            assert len(scores) == len(paths)
+            return scores
+        else:
+            cleaned_scores = []
+            for score in probs:
+                cleaned_score = {}
+                for v in self.vocab:
+                    cleaned_score[v] = float(score[self.vocab.o2i[v]])
+                cleaned_scores.append(cleaned_score)
+            return cleaned_scores
 
     def predict_path(self, path, target_class=None):
         assert isinstance(path, str)

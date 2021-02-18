@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="fastpredict",
-    version="0.0.4",
+    version="0.0.6",
     author="Kapil Yedidi",
     author_email="kapily.code@gmail.com",
     description="A few helper utilities to make it simpler to perform fastai inference/prediction",
